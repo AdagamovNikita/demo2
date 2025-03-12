@@ -91,7 +91,7 @@ def product_details():
             p.wholesale_price,
             p.sale_price,
             p.quantity,
-            COALESCE(SUM(si.quantity_sold), 0) as total_sold
+            MIN(p.quantity, COALESCE(SUM(si.quantity_sold), 0)) as total_sold
         FROM Item i
         JOIN Product p ON i.item_id = p.product_id
         LEFT JOIN ProductAttribute pa ON p.barcode_id = pa.barcode_PA_id
@@ -110,7 +110,7 @@ def product_details():
         'sale_price': row['sale_price'],
         'quantity': row['quantity'],
         'quantity_sold': row['total_sold'],
-        'remaining': max(0, row['quantity'] - row['total_sold'])
+        'remaining': row['quantity'] - row['total_sold']
     } for row in products]
     
     conn.close()
@@ -126,7 +126,7 @@ def category_details():
             pc.category_name,
             COUNT(DISTINCT p.barcode_id) as total_products,
             SUM(p.quantity) as total_quantity,
-            COALESCE(SUM(si.quantity_sold), 0) as total_sold
+            MIN(SUM(p.quantity), COALESCE(SUM(si.quantity_sold), 0)) as total_sold
         FROM ProductCategory pc
         LEFT JOIN Item i ON pc.category_id = i.category_I_id
         LEFT JOIN Product p ON i.item_id = p.product_id
@@ -140,7 +140,7 @@ def category_details():
         'category': row['category_name'],
         'quantity': row['total_quantity'] or 0,
         'quantity_sold': row['total_sold'],
-        'remaining': max(0, (row['total_quantity'] or 0) - row['total_sold'])
+        'remaining': (row['total_quantity'] or 0) - row['total_sold']
     } for row in categories]
     
     conn.close()
