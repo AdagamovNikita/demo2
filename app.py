@@ -51,7 +51,7 @@ def top_categories():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Get top selling categories with simpler query
+    # Get top selling categories with simpler query, only showing categories with sales
     cursor.execute('''
         SELECT 
             pc.category_name,
@@ -61,6 +61,7 @@ def top_categories():
         LEFT JOIN Product p ON i.item_id = p.product_id
         LEFT JOIN SaleItem si ON p.barcode_id = si.barcode_SI_id
         GROUP BY pc.category_name, pc.category_id
+        HAVING total_sold > 0
         ORDER BY total_sold DESC
     ''')
     
@@ -132,6 +133,7 @@ def category_details():
         LEFT JOIN Product p ON i.item_id = p.product_id
         LEFT JOIN SaleItem si ON p.barcode_id = si.barcode_SI_id
         GROUP BY pc.category_name, pc.category_id
+        HAVING total_products > 0 OR total_sold > 0
         ORDER BY total_sold DESC
     ''')
     
