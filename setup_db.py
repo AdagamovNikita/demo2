@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime, timedelta
+import random
 
 def create_database():
     conn = sqlite3.connect('store.db')
@@ -198,77 +199,80 @@ def create_database():
     ]
     cursor.executemany('INSERT INTO PromoCode (code_id, discount_percentage, valid_from, valid_to) VALUES (?, ?, ?, ?)', promo_codes)
     
-    # Generate some sales data
-    sale_dates = [
-        datetime.now() - timedelta(days=x) for x in range(30)
+ # Generate sales data using simple inserts
+    sales_data = [
+        # Format: (sale_date, items_list)
+        ('2023-07-01 10:00:00', [
+            ('IP13-128-BLK', 1),
+            ('MBP14-512-SP', 1),
+            ('IPP-256-WHT', 1),
+            ('APP-WHT', 2)
+        ]),
+        ('2023-07-01 14:30:00', [
+            ('GS21-128-BLK', 1),
+            ('MBA-M1-256-GRY', 1),
+            ('GTS7-256-BLK', 1),
+            ('GWS4-44-BLK', 2)
+        ]),
+        ('2023-07-02 11:15:00', [
+            ('IP13-256-BLK', 1),
+            ('GBP-512-BLK', 1),
+            ('IPP-256-WHT', 1),
+            ('AWS7-41-BLK', 2)
+        ]),
+        # Add more sales as needed following the same pattern
     ]
+
+   # Get all product prices and store them in a dictionary for easy lookup
+cursor.execute("SELECT barcode_id, sale_price FROM Product")
+all_prices = {}  # Create an empty dictionary
+
+# Fill the dictionary with barcode as key and price as value
+for row in cursor.fetchall():
+    barcode = row[0]
+    price = row[1]
+    all_prices[barcode] = price
+
+# Process each sale in the sales_data
+for sale_date, items in sales_data:
+    # Calculate the sale totals
+    # Start with zero for the subtotal
+    subtotal = 0
     
-    # Sample products from each category for sales variation
-    smartphones = ['IP13-128-BLK', 'IP13-256-BLK', 'GS21-128-BLK', 'GS21U-256-BLK']
-    laptops = ['MBP14-512-SP', 'MBA-M1-256-GRY', 'GBP-512-BLK']
-    tablets = ['IPP-256-WHT', 'GTS7-256-BLK']
-    accessories = ['APP-WHT', 'GWS4-44-BLK', 'AWS7-41-BLK']
+    # Add up the price of each item
+    for barcode, quantity in items:
+        item_price = all_prices[barcode]
+        item_total = item_price * quantity
+        subtotal = subtotal + item_total
     
-    for date in sale_dates:
-        # Create 2-3 sales per day
-        for _ in range(2):
-            # Calculate totals for this sale
-            total_without_vat = 0
-            sale_items_data = []
-            
-            # Add 1-2 smartphones
-            for _ in range(1, 3):
-                barcode = smartphones[_ % len(smartphones)]
-                qty = 1
-                price = next(p[4] for p in products if p[1] == barcode)
-                total_without_vat += price * qty
-                sale_items_data.append((barcode, qty, price))
-            
-            # Add 1 laptop
-            barcode = laptops[_ % len(laptops)]
-            qty = 1
-            price = next(p[4] for p in products if p[1] == barcode)
-            total_without_vat += price * qty
-            sale_items_data.append((barcode, qty, price))
-            
-            # Add 1-2 tablets
-            for _ in range(1, 3):
-                barcode = tablets[_ % len(tablets)]
-                qty = 1
-                price = next(p[4] for p in products if p[1] == barcode)
-                total_without_vat += price * qty
-                sale_items_data.append((barcode, qty, price))
-            
-            # Add 2-3 accessories
-            for _ in range(2, 4):
-                barcode = accessories[_ % len(accessories)]
-                qty = 2
-                price = next(p[4] for p in products if p[1] == barcode)
-                total_without_vat += price * qty
-                sale_items_data.append((barcode, qty, price))
-            
-            # Calculate VAT and total
-            vat_paid = int(total_without_vat * 0.2)
-            total_with_vat = total_without_vat + vat_paid
-            
-            # Create the sale
-            cursor.execute('''
-            INSERT INTO Sale (sale_date, source_name, tax_rate, total_price_without_vat, vat_paid, total_price_with_vat)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''', (date, 'Store', 2000, total_without_vat, vat_paid, total_with_vat))
-            
-            sale_id = cursor.lastrowid
-            
-            # Add sale items
-            for barcode, qty, price in sale_items_data:
-                cursor.execute('''
-                INSERT INTO SaleItem (sale_SI_id, barcode_SI_id, quantity_sold, price_sold_without_vat)
-                VALUES (?, ?, ?, ?)
-                ''', (sale_id, barcode, qty, price))
+    # Calculate tax (20% VAT)
+    tax_amount = int(subtotal * 0.2)
     
+    # Calculate the final total with tax
+    final_total = subtotal + tax_amount
+    
+    # Save the sale information to the database
+    cursor.execute('''
+        INSERT INTO Sale (sale_date, source_name, tax_rate, 
+                         total_price_without_vat, vat_paid, total_price_with_vat)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (sale_date, 'Store', 2000, subtotal, tax_amount, final_total))
+    
+    # Get the ID of the sale we just created
+    new_sale_id = cursor.lastrowid
+    
+    # Save each item in the sale
+    for barcode, quantity in items:
+        item_price = all_prices[barcode]
+        
+        cursor.execute('''
+            INSERT INTO SaleItem (sale_SI_id, barcode_SI_id, quantity_sold, price_sold_without_vat)
+            VALUES (?, ?, ?, ?)
+        ''', (new_sale_id, barcode, quantity, item_price))
+        
     conn.commit()
     conn.close()
 
 if __name__ == '__main__':
     create_database()
-    print("Database created and populated with sample data!") 
+    print("Database created and populated with sample data!")
