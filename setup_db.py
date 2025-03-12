@@ -199,7 +199,7 @@ def create_database():
     ]
     cursor.executemany('INSERT INTO PromoCode (code_id, discount_percentage, valid_from, valid_to) VALUES (?, ?, ?, ?)', promo_codes)
     
- # Generate sales data using simple inserts
+    # Generate sales data using simple inserts
     sales_data = [
         # Format: (sale_date, items_list)
         ('2023-07-01 10:00:00', [
@@ -223,56 +223,61 @@ def create_database():
         # Add more sales as needed following the same pattern
     ]
 
-   # Get all product prices and store them in a dictionary for easy lookup
-cursor.execute("SELECT barcode_id, sale_price FROM Product")
-all_prices = {}  # Create an empty dictionary
+    # Get all product prices and store them in a dictionary for easy lookup
+    cursor.execute("SELECT barcode_id, sale_price FROM Product")
+    all_prices = {}  # Create an empty dictionary
 
-# Fill the dictionary with barcode as key and price as value
-for row in cursor.fetchall():
-    barcode = row[0]
-    price = row[1]
-    all_prices[barcode] = price
+    # Fill the dictionary with barcode as key and price as value
+    for row in cursor.fetchall():
+        barcode = row[0]
+        price = row[1]
+        all_prices[barcode] = price
 
-# Process each sale in the sales_data
-for sale_date, items in sales_data:
-    # Calculate the sale totals
-    # Start with zero for the subtotal
-    subtotal = 0
-    
-    # Add up the price of each item
-    for barcode, quantity in items:
-        item_price = all_prices[barcode]
-        item_total = item_price * quantity
-        subtotal = subtotal + item_total
-    
-    # Calculate tax (20% VAT)
-    tax_amount = int(subtotal * 0.2)
-    
-    # Calculate the final total with tax
-    final_total = subtotal + tax_amount
-    
-    # Save the sale information to the database
-    cursor.execute('''
-        INSERT INTO Sale (sale_date, source_name, tax_rate, 
-                         total_price_without_vat, vat_paid, total_price_with_vat)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (sale_date, 'Store', 2000, subtotal, tax_amount, final_total))
-    
-    # Get the ID of the sale we just created
-    new_sale_id = cursor.lastrowid
-    
-    # Save each item in the sale
-    for barcode, quantity in items:
-        item_price = all_prices[barcode]
+    # Process each sale in the sales_data
+    for sale_date, items in sales_data:
+        # Calculate the sale totals
+        # Start with zero for the subtotal
+        subtotal = 0
         
+        # Add up the price of each item
+        for barcode, quantity in items:
+            item_price = all_prices[barcode]
+            item_total = item_price * quantity
+            subtotal = subtotal + item_total
+        
+        # Calculate tax (20% VAT)
+        tax_amount = int(subtotal * 0.2)
+        
+        # Calculate total with tax
+        total_with_tax = subtotal + tax_amount
+        
+        # Insert the sale record
         cursor.execute('''
+        INSERT INTO Sale (sale_date, source_name, tax_rate, total_price_without_vat, 
+                         vat_paid, total_price_with_vat)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''', (sale_date, 'Store', 20, subtotal, tax_amount, total_with_tax))
+        
+        # Get the sale_id for the items
+        sale_id = cursor.lastrowid
+        
+        # Insert each item in the sale
+        for barcode, quantity in items:
+            cursor.execute('''
             INSERT INTO SaleItem (sale_SI_id, barcode_SI_id, quantity_sold, price_sold_without_vat)
             VALUES (?, ?, ?, ?)
-        ''', (new_sale_id, barcode, quantity, item_price))
-        
+            ''', (sale_id, barcode, quantity, all_prices[barcode]))
+            
+            # Update the product quantity
+            cursor.execute('''
+            UPDATE Product 
+            SET quantity = quantity - ? 
+            WHERE barcode_id = ?
+            ''', (quantity, barcode))
+    
     conn.commit()
     conn.close()
 
 if __name__ == '__main__':
     create_database()
-    print("Database created and populated with sample data!")
+    print("Database created and populated with sample data.")
