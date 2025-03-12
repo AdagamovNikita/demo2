@@ -57,8 +57,8 @@ def search_brand():
             SELECT DISTINCT
                 i.brand_name as Brand,
                 i.model as Model,
-                p.sale_price as Original_Price,
-                COALESCE(ph.new_price, p.sale_price) as New_Price,
+                p.sale_price / 100.0 as Original_Price,
+                COALESCE(ph.new_price / 100.0, p.sale_price / 100.0) as New_Price,
                 COALESCE(ph.change_date, 'No changes') as Date,
                 p.quantity as Quantity,
                 s.source_name as Source,
@@ -96,7 +96,9 @@ def top_products():
             SELECT 
                 i.brand_name as brand,
                 i.model as model,
-                COALESCE(SUM(si.quantity_sold), 0) as quantity
+                COALESCE(SUM(si.quantity_sold), 0) as quantity,
+                p.wholesale_price / 100.0 as wholesale_price,
+                p.sale_price / 100.0 as sale_price
             FROM Item i
             LEFT JOIN Product p ON i.item_id = p.product_id
             LEFT JOIN SaleItem si ON p.barcode_id = si.barcode_SI_id
@@ -113,7 +115,7 @@ def top_products():
         conn.close()
         return jsonify({
             'products': [dict(row) for row in products],
-            'profit': profit['profit'] / 100  # Convert cents to euros if needed
+            'profit': profit['profit'] / 100  # Convert cents to dollars if needed
         })
     except Exception as e:
         print(f"Error: {e}")
@@ -172,11 +174,11 @@ def product_details():
                 i.model,
                 pa.attribute_name,
                 pa.attribute_value,
-                p.wholesale_price * 100 as wholesale_price,
-                p.sale_price * 100 as sale_price,
+                p.wholesale_price / 100.0 as wholesale_price,
+                p.sale_price / 100.0 as sale_price,
                 p.quantity,
-                MIN(p.quantity, COALESCE(SUM(si.quantity_sold), 0)) as quantity_sold,
-                MAX(0, p.quantity - MIN(p.quantity, COALESCE(SUM(si.quantity_sold), 0))) as remaining
+                COALESCE(SUM(si.quantity_sold), 0) as quantity_sold,
+                MAX(0, p.quantity - COALESCE(SUM(si.quantity_sold), 0)) as remaining
             FROM Item i
             JOIN Product p ON i.item_id = p.product_id
             LEFT JOIN ProductAttribute pa ON p.barcode_id = pa.barcode_PA_id
