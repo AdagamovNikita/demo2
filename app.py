@@ -110,7 +110,7 @@ def product_details():
         'sale_price': row['sale_price'],
         'quantity': row['quantity'],
         'quantity_sold': row['total_sold'],
-        'remaining': row['quantity'] - row['total_sold']
+        'remaining': max(0, row['quantity'] - row['total_sold'])
     } for row in products]
     
     conn.close()
@@ -140,7 +140,7 @@ def category_details():
         'category': row['category_name'],
         'quantity': row['total_quantity'] or 0,
         'quantity_sold': row['total_sold'],
-        'remaining': (row['total_quantity'] or 0) - row['total_sold']
+        'remaining': max(0, (row['total_quantity'] or 0) - row['total_sold'])
     } for row in categories]
     
     conn.close()
