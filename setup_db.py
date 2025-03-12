@@ -198,10 +198,11 @@ def create_database():
         ('BACK2SCHOOL', 1500, '2023-08-01', '2023-09-30')
     ]
     cursor.executemany('INSERT INTO PromoCode (code_id, discount_percentage, valid_from, valid_to) VALUES (?, ?, ?, ?)', promo_codes)
-    
-    # Generate sales data using simple inserts
+--------------------------------------------------------  
+    # Reintroduce sales data processing
+
+    # Sample sales data
     sales_data = [
-        # Format: (sale_date, items_list)
         ('2023-07-01 10:00:00', [
             ('IP13-128-BLK', 1),
             ('MBP14-512-SP', 1),
@@ -219,62 +220,34 @@ def create_database():
             ('GBP-512-BLK', 1),
             ('IPP-256-WHT', 1),
             ('AWS7-41-BLK', 2)
-        ]),
-        # Add more sales as needed following the same pattern
+        ])
     ]
 
-    # Get all product prices and store them in a dictionary for easy lookup
+    # Get all product prices
     cursor.execute("SELECT barcode_id, sale_price FROM Product")
-    all_prices = {}  # Create an empty dictionary
+    all_prices = {row[0]: row[1] for row in cursor.fetchall()}
 
-    # Fill the dictionary with barcode as key and price as value
-    for row in cursor.fetchall():
-        barcode = row[0]
-        price = row[1]
-        all_prices[barcode] = price
-
-    # Process each sale in the sales_data
+    # Process each sale
     for sale_date, items in sales_data:
-        # Calculate the sale totals
-        # Start with zero for the subtotal
-        subtotal = 0
-        
-        # Add up the price of each item
-        for barcode, quantity in items:
-            item_price = all_prices[barcode]
-            item_total = item_price * quantity
-            subtotal = subtotal + item_total
-        
-        # Calculate tax (20% VAT)
-        tax_amount = int(subtotal * 0.2)
-        
-        # Calculate total with tax
-        total_with_tax = subtotal + tax_amount
-        
-        # Insert the sale record
-        cursor.execute('''
-        INSERT INTO Sale (sale_date, source_name, tax_rate, total_price_without_vat, 
-                         vat_paid, total_price_with_vat)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''', (sale_date, 'Store', 20, subtotal, tax_amount, total_with_tax))
-        
-        # Get the sale_id for the items
+        subtotal = sum(all_prices[barcode] * quantity for barcode, quantity in items)
+        tax = int(subtotal * 0.2)
+        total = subtotal + tax
+
+        cursor.execute(
+            '''INSERT INTO Sale (sale_date, source_name, tax_rate, total_price_without_vat, vat_paid, total_price_with_vat)
+               VALUES (?, ?, ?, ?, ?, ?)''',
+            (sale_date, 'Store', 20, subtotal, tax, total)
+        )
         sale_id = cursor.lastrowid
-        
-        # Insert each item in the sale
+
         for barcode, quantity in items:
-            cursor.execute('''
-            INSERT INTO SaleItem (sale_SI_id, barcode_SI_id, quantity_sold, price_sold_without_vat)
-            VALUES (?, ?, ?, ?)
-            ''', (sale_id, barcode, quantity, all_prices[barcode]))
-            
-            # Update the product quantity
-            cursor.execute('''
-            UPDATE Product 
-            SET quantity = quantity - ? 
-            WHERE barcode_id = ?
-            ''', (quantity, barcode))
-    
+            cursor.execute(
+                '''INSERT INTO SaleItem (sale_SI_id, barcode_SI_id, quantity_sold, price_sold_without_vat)
+                   VALUES (?, ?, ?, ?)''',
+                (sale_id, barcode, quantity, all_prices[barcode])
+            )
+            cursor.execute('UPDATE Product SET quantity = quantity - ? WHERE barcode_id = ?', (quantity, barcode))
+-------------------------------------------------------- THIS PART IS A PROBLEM
     conn.commit()
     conn.close()
 
