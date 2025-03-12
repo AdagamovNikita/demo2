@@ -1,6 +1,6 @@
-// Function to format currency (convert cents to euros)
-function formatCurrency(cents) {
-    return (cents / 100).toFixed(2);
+// Function to format currency
+function formatCurrency(value) {
+    return value ? value.toFixed(2) : '0.00';
 }
 
 // Function to load and display top products
@@ -15,9 +15,9 @@ async function loadTopProducts() {
         data.products.forEach(product => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${product.brand}</td>
-                <td>${product.model}</td>
-                <td>${product.quantity}</td>
+                <td>${product.brand || 'N/A'}</td>
+                <td>${product.model || 'N/A'}</td>
+                <td>${product.quantity || 0}</td>
             `;
             tbody.appendChild(row);
         });
@@ -40,8 +40,8 @@ async function loadTopCategories() {
         data.categories.forEach(category => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${category.category}</td>
-                <td>${category.quantity}</td>
+                <td>${category.category || 'N/A'}</td>
+                <td>${category.quantity || 0}</td>
             `;
             tbody.appendChild(row);
         });
@@ -64,15 +64,15 @@ async function loadProductDetails() {
         products.forEach(product => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${product.brand}</td>
-                <td>${product.model}</td>
+                <td>${product.brand || 'N/A'}</td>
+                <td>${product.model || 'N/A'}</td>
                 <td>${product.attribute_name || '-'}</td>
                 <td>${product.attribute_value || '-'}</td>
                 <td>${formatCurrency(product.wholesale_price)}€</td>
                 <td>${formatCurrency(product.sale_price)}€</td>
-                <td>${product.quantity}</td>
+                <td>${product.quantity || 0}</td>
                 <td>${product.quantity_sold || 0}</td>
-                <td>${product.remaining}</td>
+                <td>${product.remaining || 0}</td>
             `;
             tbody.appendChild(row);
         });
@@ -93,10 +93,10 @@ async function loadCategoryDetails() {
         categories.forEach(category => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${category.category}</td>
-                <td>${category.quantity}</td>
-                <td>${category.quantity_sold}</td>
-                <td>${category.remaining}</td>
+                <td>${category.category || 'N/A'}</td>
+                <td>${category.quantity || 0}</td>
+                <td>${category.quantity_sold || 0}</td>
+                <td>${category.remaining || 0}</td>
             `;
             tbody.appendChild(row);
         });
