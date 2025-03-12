@@ -203,25 +203,68 @@ def create_database():
         datetime.now() - timedelta(days=x) for x in range(30)
     ]
     
+    # Sample products from each category for sales variation
+    smartphones = ['IP13-128-BLK', 'IP13-256-BLK', 'GS21-128-BLK', 'GS21U-256-BLK']
+    laptops = ['MBP14-512-SP', 'MBA-M1-256-GRY', 'GBP-512-BLK']
+    tablets = ['IPP-256-WHT', 'GTS7-256-BLK']
+    accessories = ['APP-WHT', 'GWS4-44-BLK', 'AWS7-41-BLK']
+    
     for date in sale_dates:
-        # Create a sale
-        cursor.execute('''
-        INSERT INTO Sale (sale_date, source_name, tax_rate, total_price_without_vat, vat_paid, total_price_with_vat)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''', (date, 'Store', 2000, 100000, 20000, 120000))
-        
-        sale_id = cursor.lastrowid
-        
-        # Add sale items
-        sale_items = [
-            (sale_id, 'IP13-128-BLK', 2, 99900),
-            (sale_id, 'GS21-128-BLK', 1, 89900),
-            (sale_id, 'APP-WHT', 3, 24900)
-        ]
-        cursor.executemany('''
-        INSERT INTO SaleItem (sale_SI_id, barcode_SI_id, quantity_sold, price_sold_without_vat)
-        VALUES (?, ?, ?, ?)
-        ''', sale_items)
+        # Create 2-3 sales per day
+        for _ in range(2):
+            # Calculate totals for this sale
+            total_without_vat = 0
+            sale_items_data = []
+            
+            # Add 1-2 smartphones
+            for _ in range(1, 3):
+                barcode = smartphones[_ % len(smartphones)]
+                qty = 1
+                price = next(p[4] for p in products if p[1] == barcode)
+                total_without_vat += price * qty
+                sale_items_data.append((barcode, qty, price))
+            
+            # Add 1 laptop
+            barcode = laptops[_ % len(laptops)]
+            qty = 1
+            price = next(p[4] for p in products if p[1] == barcode)
+            total_without_vat += price * qty
+            sale_items_data.append((barcode, qty, price))
+            
+            # Add 1-2 tablets
+            for _ in range(1, 3):
+                barcode = tablets[_ % len(tablets)]
+                qty = 1
+                price = next(p[4] for p in products if p[1] == barcode)
+                total_without_vat += price * qty
+                sale_items_data.append((barcode, qty, price))
+            
+            # Add 2-3 accessories
+            for _ in range(2, 4):
+                barcode = accessories[_ % len(accessories)]
+                qty = 2
+                price = next(p[4] for p in products if p[1] == barcode)
+                total_without_vat += price * qty
+                sale_items_data.append((barcode, qty, price))
+            
+            # Calculate VAT and total
+            vat_paid = int(total_without_vat * 0.2)
+            total_with_vat = total_without_vat + vat_paid
+            
+            # Create the sale
+            cursor.execute('''
+            INSERT INTO Sale (sale_date, source_name, tax_rate, total_price_without_vat, vat_paid, total_price_with_vat)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''', (date, 'Store', 2000, total_without_vat, vat_paid, total_with_vat))
+            
+            sale_id = cursor.lastrowid
+            
+            # Add sale items
+            for barcode, qty, price in sale_items_data:
+                cursor.execute('''
+                INSERT INTO SaleItem (sale_SI_id, barcode_SI_id, quantity_sold, price_sold_without_vat)
+                VALUES (?, ?, ?, ?)
+                ''', (sale_id, barcode, qty, price))
     
     conn.commit()
     conn.close()

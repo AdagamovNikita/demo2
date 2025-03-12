@@ -51,23 +51,23 @@ def top_categories():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Get top selling categories with correct grouping and totals
+    # Get top selling categories with simpler query
     cursor.execute('''
         SELECT 
-            pc.category_name, 
+            pc.category_name,
             COALESCE(SUM(si.quantity_sold), 0) as total_sold
         FROM ProductCategory pc
         LEFT JOIN Item i ON pc.category_id = i.category_I_id
         LEFT JOIN Product p ON i.item_id = p.product_id
         LEFT JOIN SaleItem si ON p.barcode_id = si.barcode_SI_id
-        GROUP BY pc.category_name
+        GROUP BY pc.category_name, pc.category_id
         ORDER BY total_sold DESC
     ''')
     
     categories = cursor.fetchall()
     result = [{'category': row['category_name'], 'quantity': row['total_sold']} for row in categories]
     
-    # Calculate total revenue with correct calculation
+    # Calculate total revenue
     cursor.execute('''
         SELECT COALESCE(SUM(si.price_sold_without_vat * si.quantity_sold), 0) as total_revenue
         FROM SaleItem si
@@ -125,22 +125,22 @@ def category_details():
         SELECT 
             pc.category_name,
             COUNT(DISTINCT p.barcode_id) as total_products,
-            SUM(p.quantity) as total_quantity,
-            MIN(SUM(p.quantity), COALESCE(SUM(si.quantity_sold), 0)) as total_sold
+            COALESCE(SUM(p.quantity), 0) as total_quantity,
+            COALESCE(SUM(si.quantity_sold), 0) as total_sold
         FROM ProductCategory pc
         LEFT JOIN Item i ON pc.category_id = i.category_I_id
         LEFT JOIN Product p ON i.item_id = p.product_id
         LEFT JOIN SaleItem si ON p.barcode_id = si.barcode_SI_id
-        GROUP BY pc.category_name
+        GROUP BY pc.category_name, pc.category_id
         ORDER BY total_sold DESC
     ''')
     
     categories = cursor.fetchall()
     result = [{
         'category': row['category_name'],
-        'quantity': row['total_quantity'] or 0,
+        'quantity': row['total_quantity'],
         'quantity_sold': row['total_sold'],
-        'remaining': (row['total_quantity'] or 0) - row['total_sold']
+        'remaining': row['total_quantity'] - row['total_sold']
     } for row in categories]
     
     conn.close()
