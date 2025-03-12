@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <div class="section">
+                <h2>Top Selling Products</h2>
+                <table id="products-table">
+                    <thead>
+                        <tr>
+                            <th>Brand</th>
+                            <th>Model</th>
+                            <th>Quantity Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="summary">Profit: <span id="profit">0</span>€</div>
+            </div>
+            
+            <div class="section">
+                <h2>Top Selling Categories</h2>
+                <table id="categories-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Quantity Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="summary">Revenue: <span id="revenue">0</span>€</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Product Details -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Top Selling Products</h2>
+            <table id="product-details-table">
+                <thead>
+                    <tr>
+                        <th>Brand</th>
+                        <th>Model</th>
+                        <th>Attribute Name</th>
+                        <th>Attribute Value</th>
+                        <th>Wholesale Price</th>
+                        <th>Sale Price</th>
+                        <th>Quantity</th>
+                        <th>Quantity Sold</th>
+                        <th>Remaining</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal for Category Details -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Top Selling Categories</h2>
+            <table id="category-details-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Quantity Sold</th>
+                        <th>Remaining</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html> 
