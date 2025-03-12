@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for
 import sqlite3
 from datetime import datetime
 
@@ -13,7 +13,7 @@ def get_db_connection():
 
 # Home page
 @app.route('/')
-def home_page():
+def index():
     conn = get_db_connection()
     
     # Get all brands for the search dropdown
@@ -38,6 +38,9 @@ def home_page():
 @app.route('/search_brand', methods=['POST'])
 def search_brand():
     brand = request.form.get('brand')
+    if not brand:
+        return redirect(url_for('index'))
+        
     conn = get_db_connection()
     
     results = conn.execute('''
@@ -143,8 +146,8 @@ def product_details():
             p.wholesale_price * 100 as wholesale_price,
             p.sale_price * 100 as sale_price,
             p.quantity,
-            COALESCE(SUM(si.quantity_sold), 0) as quantity_sold,
-            p.quantity - COALESCE(SUM(si.quantity_sold), 0) as remaining
+            MIN(p.quantity, COALESCE(SUM(si.quantity_sold), 0)) as quantity_sold,
+            MAX(0, p.quantity - MIN(p.quantity, COALESCE(SUM(si.quantity_sold), 0))) as remaining
         FROM Item i
         JOIN Product p ON i.item_id = p.product_id
         LEFT JOIN ProductAttribute pa ON p.barcode_id = pa.barcode_PA_id
@@ -164,8 +167,8 @@ def category_details():
         SELECT 
             pc.category_name as category,
             SUM(p.quantity) as quantity,
-            COALESCE(SUM(si.quantity_sold), 0) as quantity_sold,
-            SUM(p.quantity) - COALESCE(SUM(si.quantity_sold), 0) as remaining
+            MIN(SUM(p.quantity), COALESCE(SUM(si.quantity_sold), 0)) as quantity_sold,
+            MAX(0, SUM(p.quantity) - MIN(SUM(p.quantity), COALESCE(SUM(si.quantity_sold), 0))) as remaining
         FROM ProductCategory pc
         LEFT JOIN Item i ON pc.category_id = i.category_I_id
         LEFT JOIN Product p ON i.item_id = p.product_id
